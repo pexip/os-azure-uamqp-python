@@ -1,0 +1,42 @@
+azure-uamqp-python (1.2.9-1) unstable; urgency=medium
+
+  * Merge tag 'v1.2.9' into debian/sid
+  * Remove Testsuite: autopkgtest from d/control
+
+ -- Luca Boccassi <bluca@debian.org>  Tue, 21 Jul 2020 00:11:00 +0100
+
+azure-uamqp-python (1.2.8-1) unstable; urgency=medium
+
+  * Merge tag 'v1.2.8' into debian/sid
+  * Drop repro.patch, merged upstream
+
+ -- Luca Boccassi <bluca@debian.org>  Tue, 26 May 2020 12:06:36 +0100
+
+azure-uamqp-python (1.2.6-4) unstable; urgency=medium
+
+  * Enable hardening+all and reproducible=+fixfilepath (Closes: #952555)
+
+ -- Luca Boccassi <bluca@debian.org>  Wed, 11 Mar 2020 11:12:34 +0000
+
+azure-uamqp-python (1.2.6-3) unstable; urgency=medium
+
+  * Add autopkgtest support
+  * Set VERBOSE=1 if terse is not passed, for CMake build
+  * Move package under Python Modules Team maintenance
+
+ -- Luca Boccassi <bluca@debian.org>  Sat, 07 Mar 2020 10:50:29 +0000
+
+azure-uamqp-python (1.2.6-2) unstable; urgency=medium
+
+  * Add patch to sort pyx files for input to cython, and to remove build
+    path from the generated source file.
+  * Append CPPFLAGS to CFLAGS, built-in uamqp library is built with CMake.
+  * Restrict architecture to linux-any, other platforms are not supported.
+
+ -- Luca Boccassi <bluca@debian.org>  Wed, 26 Feb 2020 20:21:24 +0000
+
+azure-uamqp-python (1.2.6-1) unstable; urgency=medium
+
+  * Initial release. (Closes: #951670)
+
+ -- Luca Boccassi <bluca@debian.org>  Wed, 19 Feb 2020 20:37:45 +0000

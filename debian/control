@@ -1,0 +1,30 @@
+Source: azure-uamqp-python
+Maintainer: Debian Python Modules Team <python-modules-team@lists.alioth.debian.org>
+Uploaders: Luca Boccassi <bluca@debian.org>,
+Build-Depends: cmake,
+               cython3,
+               debhelper-compat (= 12),
+               dh-python,
+               libssl-dev,
+               python3-all-dev,
+               python3-certifi,
+               python3-pytest <!nocheck>,
+               python3-pytest-asyncio <!nocheck>,
+               python3-setuptools,
+               python3-six,
+Standards-Version: 4.5.0
+Section: python
+Priority: optional
+Rules-Requires-Root: no
+Homepage: https://github.com/Azure/azure-uamqp-python
+Vcs-Browser: https://salsa.debian.org/python-team/modules/azure-uamqp-python
+Vcs-Git: https://salsa.debian.org/python-team/modules/azure-uamqp-python.git
+Testsuite: autopkgtest-pkg-python
+
+Package: python3-uamqp
+Architecture: linux-any
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
+Provides: ${python3:Provides},
+Description: AMQP 1.0 client library for Python
+ A cython client library for the AMQP 1.0 protocol, implemented using the Azure
+ uAMQP library for C.
