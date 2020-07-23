@@ -1,6 +1,7 @@
 azure-uamqp-python (1.2.9-1pexip1) pexip; urgency=medium
 
   * Prepare Pexip packaging
+  * Switch libssl-dev build-dep to suit our setup
 
  -- Steve McIntyre <steve.mcintyre@pexip.com>  Thu, 23 Jul 2020 15:36:50 +0000
 
