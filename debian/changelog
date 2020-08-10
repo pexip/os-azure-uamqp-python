@@ -1,3 +1,15 @@
+azure-uamqp-python (1.2.10-1pexip1) pexip; urgency=medium
+
+  * New upstream release
+
+ -- Steve McIntyre <steve.mcintyre@pexip.com>  Mon, 10 Aug 2020 16:30:55 +0100
+
+azure-uamqp-python (1.2.10-1) unstable; urgency=medium
+
+  * Merge tag 'v1.2.10' into debian/sid
+
+ -- Luca Boccassi <bluca@debian.org>  Thu, 06 Aug 2020 10:22:58 +0100
+
 azure-uamqp-python (1.2.9-1pexip1) pexip; urgency=medium
 
   * Prepare Pexip packaging
