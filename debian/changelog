@@ -1,3 +1,9 @@
+azure-uamqp-python (1.2.12-1) unstable; urgency=medium
+
+  * Merge tag 'v1.2.12' into debian/sid
+
+ -- Luca Boccassi <bluca@debian.org>  Mon, 12 Oct 2020 10:22:58 +0100
+
 azure-uamqp-python (1.2.11-1) unstable; urgency=medium
 
   [ Debian Janitor ]
