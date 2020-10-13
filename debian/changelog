@@ -1,3 +1,26 @@
+azure-uamqp-python (1.2.11-1pexip1) pexip; urgency=medium
+
+  * New upstream release
+
+ -- Steve McIntyre <steve.mcintyre@pexip.com>  Tue, 13 Oct 2020 10:27:54 +0100
+
+azure-uamqp-python (1.2.11-1) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
+
+  [ Ondřej Nový ]
+  * d/control: Update Maintainer field with new Debian Python Team
+    contact address.
+  * d/control: Update Vcs-* fields with new Debian Python Team Salsa
+    layout.
+
+  [ Luca Boccassi ]
+  * Merge tag 'v1.2.11' into debian/sid
+
+ -- Luca Boccassi <bluca@debian.org>  Tue, 06 Oct 2020 15:19:04 +0100
+
 azure-uamqp-python (1.2.10-1pexip1) pexip; urgency=medium
 
   * New upstream release
