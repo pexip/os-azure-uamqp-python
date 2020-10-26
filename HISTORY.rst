@@ -3,6 +3,12 @@
 Release History
 ===============
 
+1.2.12 (2020-10-09)
++++++++++++++++++++
+
+- Updated cython dependency to 0.29.21.
+- Added support for Python 3.9.
+
 1.2.11 (2020-10-01)
 +++++++++++++++++++
 
