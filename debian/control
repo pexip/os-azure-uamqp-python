@@ -12,7 +12,7 @@ Build-Depends: cmake,
                python3-pytest-asyncio <!nocheck>,
                python3-setuptools,
                python3-six,
-Standards-Version: 4.5.0
+Standards-Version: 4.5.1
 Section: python
 Priority: optional
 Rules-Requires-Root: no
