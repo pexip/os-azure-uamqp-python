@@ -3,6 +3,91 @@
 Release History
 ===============
 
+1.5.3 (2022-03-23)
++++++++++++++++++++
+
+- Updated OpenSSL dependency to 1.1.1n for wheels of manylinux and macOS.
+
+
+1.5.2 (2022-03-15)
++++++++++++++++++++
+
+- Fixed bug that resulted in an error when deepcopying BatchMessage objects (azure-sdk-for-python issue #22529).
+
+1.5.1 (2022-01-12)
++++++++++++++++++++
+
+- Added back the support for Python 3.6.
+
+1.5.0 (2022-01-05)
++++++++++++++++++++
+
+This version and all future versions will require Python 3.7+, Python 2.7 and Python 3.6 are no longer supported.
+
+- `SASTokenAuth`, `JWTTokenAuth`, `SASTokenAsync`, and `JWTTokenAsync` now takes keyword argument `refresh_window` to override default token refresh timing in constructors.
+- Fixed bug that `SendClientAsync` might run into infinite loop while sending when it is shutdown unexpectedly.
+- Updated dependencies Azure uAMQP C @ `2021-11-16 <https://github.com/Azure/azure-uamqp-c/tree/259db533a66a8fa6e9ac61c39a9dae880224145f>`__ and Azure C Shared Utility @ `2021-11-15 <https://github.com/Azure/azure-c-shared-utility/tree/735be16a943c2a9cbbddef0543f871f5bc0e27ab>`__.
+- Fixed bug that the `keep_alive_thread` of `AMQPClient` should not keep program from exiting in the case of `AMQPClient` not being closed properly.
+
+1.4.3 (2021-10-06)
++++++++++++++++++++
+
+- Added support for Python 3.10.
+
+1.4.2 (2021-09-21)
++++++++++++++++++++
+
+- Fixed memory leak in win32 socketio and tlsio (azure-sdk-for-python issue #19777).
+- Fixed memory leak in the process of converting AMQPValue into string (azure-sdk-for-python issue #19777).
+
+1.4.1 (2021-06-28)
++++++++++++++++++++
+
+- Fixed bug that JWTTokenAuth and JWTTokenAsync do not initialize token for token types other than b'jwt'.
+- Fixed bug that attibutes `creation_time`, `absolute_expiry_time` and `group_sequence` on `MessageProperties` should be compatible with integer types on Python 2.7.
+
+1.4.0 (2021-05-03)
++++++++++++++++++++
+
+This version and all future versions will require Python 2.7 or Python 3.6+, Python 3.5 is no longer supported.
+
+- Fixed memory leaks in the process of link attach where source and target cython objects are not properly deallocated (azure-sdk-for-python issue #15747).
+- Improved management operation callback not to parse description value of non AMQP_TYPE_STRING type as string (azure-sdk-for-python issue #18361).
+
+1.3.0 (2021-04-05)
++++++++++++++++++++
+
+This version will be the last version to officially support Python 3.5, future versions will require Python 2.7 or Python 3.6+.
+
+- Added support for AMQP Sequence as the body type of an amqp message.
+- Added new class `uamqp.MessageBodyType` to represent the body type of an amqp message, including:
+
+    - `Data`: The body consists of one or more data sections and each section contains opaque binary data.
+    - `Sequence`: The body consists of one or more sequence sections and each section contains an arbitrary number of structured data elements.
+    - `Value`: The body consists of one amqp-value section and the section contains a single AMQP value.
+
+- Added new parameters to the constructor of `uamqp.Message`:
+
+    - `body_type` which takes `uamqp.MessageBodyType` to specify the body type of an amqp message.
+    - `footer` which takes a dict to set the footer of an amqp message.
+    - `delivery_annotations` which takes a dict to set the delivery annotations of an amqp message.
+
+- Added support for pickling `uamqp.Message`.
+- Fixed bug that sending message of large size triggering segmentation fault when the underlying socket connection is lost.
+- Fixed bug in link flow control where link credit and delivery count should be calculated based on per message instead of per transfer frame.
+
+1.2.15 (2021-03-02)
++++++++++++++++++++
+
+- Added desired-capabilities for `SendClient(Async)` and `MessageSender(Async)` as part of the AMQP protocol.
+- Added types for AMQPShort and AMQPuShort for explicit handling of short and unsigned short encoding.
+
+1.2.14 (2021-02-01)
++++++++++++++++++++
+
+- Updated Azure uAMQP C and Azure C Shared Utility dependencies.
+- Fixed memory leak with SAS Token creation.
+
 1.2.13 (2021-01-06)
 +++++++++++++++++++
 

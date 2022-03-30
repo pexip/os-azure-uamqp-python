@@ -2,30 +2,24 @@ trigger:
   - master
 
 variables:
-  PythonVersion27: '2.7'
-  PythonVersion35: '3.5'
   PythonVersion36: '3.6'
   PythonVersion37: '3.7'
   PythonVersion38: '3.8'
   PythonVersion39: '3.9'
+  PythonVersion310: '3.10.0'
+  GetPip: 'https://bootstrap.pypa.io/get-pip.py'
 
 jobs:
   - job: 'Windows'
 
     pool:
-      vmImage: 'vs2017-win2016'
+      vmImage: 'windows-2019'
 
     timeoutInMinutes: 120
 
     strategy:
       maxParallel: 1
       matrix:
-        x64 Python 2.7:
-          PythonArchitecture: 'x64'
-          PythonVersion: '$(PythonVersion27)'
-        x64 Python 3.5:
-          PythonArchitecture: 'x64'
-          PythonVersion: '$(PythonVersion35)'
         x64 Python 3.6:
           PythonArchitecture: 'x64'
           PythonVersion: '$(PythonVersion36)'
@@ -38,12 +32,9 @@ jobs:
         x64 Python 3.9:
           PythonArchitecture: 'x64'
           PythonVersion: '$(PythonVersion39)'
-        x86 Python 2.7:
-          PythonArchitecture: 'x86'
-          PythonVersion: '$(PythonVersion27)'
-        x86 Python 3.5:
-          PythonArchitecture: 'x86'
-          PythonVersion: '$(PythonVersion35)'
+        x64 Python 3.10:
+          PythonArchitecture: 'x64'
+          PythonVersion: '$(PythonVersion310)'
         x86 Python 3.6:
           PythonArchitecture: 'x86'
           PythonVersion: '$(PythonVersion36)'
@@ -56,6 +47,9 @@ jobs:
         x86 Python 3.9:
           PythonArchitecture: 'x86'
           PythonVersion: '$(PythonVersion39)'
+        x86 Python 3.10:
+          PythonArchitecture: 'x86'
+          PythonVersion: '$(PythonVersion310)'
 
     steps:
       - template: /.azure-pipelines/use-python-version.yml
@@ -64,15 +58,9 @@ jobs:
           versionSpec: '$(PythonVersion)'
 
       - powershell: |
-          Invoke-WebRequest -UseBasicParsing -Uri https://download.microsoft.com/download/7/9/6/796EF2E4-801B-4FC4-AB28-B59FBF6D907B/VCForPython27.msi -OutFile VCForPython27.msi
-          Start-Process -Wait -NoNewWindow msiexec.exe -ArgumentList "/i VCForPython27.msi /quiet /qn /norestart /log VCForPython27.log ALLUSERS=1"
-          Get-Content VCForPython27.log
-        displayName: 'Install Microsoft Visual C++ Compiler for Python 2.7'
-        condition: eq(variables['PythonVersion'], variables['PythonVersion27'])
-
-      - powershell: |
           python --version
-          Invoke-WebRequest -UseBasicParsing -Uri https://bootstrap.pypa.io/get-pip.py | Select-Object -ExpandProperty Content | python
+          Invoke-WebRequest -UseBasicParsing -Uri $(GetPip) | Select-Object -ExpandProperty Content | python
+          python -m pip --version
           python -m pip install -r dev_requirements.txt
         displayName: 'Install dependencies'
         env:
@@ -130,12 +118,6 @@ jobs:
     strategy:
       maxParallel: 1
       matrix:
-        Python 2.7:
-          PythonBin: 'python2'
-          PythonVersion: '$(PythonVersion27)'
-        Python 3.5:
-          PythonBin: 'python3'
-          PythonVersion: '$(PythonVersion35)'
         Python 3.6:
           PythonBin: 'python3'
           PythonVersion: '$(PythonVersion36)'
@@ -148,16 +130,18 @@ jobs:
         Python 3.9:
           PythonBin: 'python3'
           PythonVersion: '$(PythonVersion39)'
+        Python 3.10:
+          PythonBin: 'python3'
+          PythonVersion: '$(PythonVersion310)'
 
     variables:
       MacOSXDeploymentTarget: '10.9'
       OpenSSLDir: $(Agent.BuildDirectory)/openssl-macosx$(MacOSXDeploymentTarget)
-      PythonVersion27: '2.7.17'
-      PythonVersion35: '3.5.4'
       PythonVersion36: '3.6.8'
       PythonVersion37: '3.7.6'
       PythonVersion38: '3.8.2'
       PythonVersion39: '3.9.0'
+      PythonVersion310: '3.10.0'
 
     steps:
       - task: DownloadPipelineArtifact@1
@@ -186,7 +170,8 @@ jobs:
 
       - script: |
           $(PythonBin) --version
-          curl -sS https://bootstrap.pypa.io/get-pip.py | $(PythonBin) - --user
+          curl -sS $(GetPip) | $(PythonBin) - --user
+          python -m pip --version
           $(PythonBin) -m pip install --user -r dev_requirements.txt
         displayName: 'Install dependencies'
 
@@ -249,10 +234,6 @@ jobs:
     strategy:
       maxParallel: 1
       matrix:
-        Python 2.7:
-          PythonVersion: '$(PythonVersion27)'
-        Python 3.5:
-          PythonVersion: '$(PythonVersion35)'
         Python 3.6:
           PythonVersion: '$(PythonVersion36)'
         Python 3.7:
@@ -261,6 +242,8 @@ jobs:
           PythonVersion: '$(PythonVersion38)'
         Python 3.9:
           PythonVersion: '$(PythonVersion39)'
+        Python 3.10:
+          PythonVersion: '$(PythonVersion310)'
 
     steps:
       - template: /.azure-pipelines/use-python-version.yml
@@ -274,7 +257,8 @@ jobs:
 
       - script: |
           python --version
-          curl -sS https://bootstrap.pypa.io/get-pip.py | python - --user
+          curl -sS $(GetPip) | python - --user
+          python -m pip --version
           python -m pip install --user -r dev_requirements.txt
         displayName: 'Install dependencies'
 
@@ -316,3 +300,88 @@ jobs:
         inputs:
           artifactName: uamqp-linux-$(PythonVersion)-whl
           pathToPublish: 'dist'
+
+  - job: 'SDK_LiveTest_windows2019_37'
+    timeoutInMinutes: 300
+    dependsOn: 'Windows'
+    pool:
+      name: 'azsdk-pool-mms-win-2019-general'
+      vmImage: 'MMS2019'
+    strategy:
+      matrix:
+        EventHub x64 Python 3.7:
+          PythonVersion: '$(PythonVersion37)'
+          SDK: 'EventHub'
+        EventHub x64 Python 3.10:
+          PythonVersion: '$(PythonVersion310)'
+          SDK: 'EventHub'
+        ServiceBus x64 Python 3.7:
+          PythonVersion: '$(PythonVersion37)'
+          SDK: 'ServiceBus'
+        ServiceBus x64 Python 3.10:
+          PythonVersion: '$(PythonVersion310)'
+          SDK: 'ServiceBus'
+    variables:
+      PythonArchitecture: 'x64'
+      OSArch: 'Windows'
+      DownloadArtifactFolder: 'uamqp-win$(PythonArchitecture)-$(PythonVersion)-whl'
+    steps:
+      - template: /.azure-pipelines/use-python-version.yml
+        parameters:
+          architecture: '$(PythonArchitecture)'
+          versionSpec: '$(PythonVersion)'
+      - template: /.azure-pipelines/test-eh-sb-sdk.yml
+
+  - job: 'SDK_LiveTest_macOS1015_36'
+    timeoutInMinutes: 300
+    dependsOn: 'MacOS'
+    pool:
+      name: 'Azure Pipelines'
+      vmImage: 'macOS-10.15'
+    strategy:
+      matrix:
+        EventHub Python 3.6:
+          SDK: 'EventHub'
+        ServiceBus Python 3.6:
+          SDK: 'ServiceBus'
+    variables:
+      PythonBin: 'python3'
+      PythonVersion: '$(PythonVersion36)'
+      MacOSXDeploymentTarget: '10.9'
+      PythonVersion368: '3.6.8'
+      OSArch: 'MacOS'
+      DownloadArtifactFolder: 'uamqp-macosx$(MacOSXDeploymentTarget)-$(PythonVersion368)-whl'
+    steps:
+      - template: /.azure-pipelines/use-python-version.yml
+        parameters:
+          versionSpec: '$(PythonVersion)'
+      - template: /.azure-pipelines/test-eh-sb-sdk.yml
+
+  - job: 'SDK_LiveTest_ubuntu1804_39'
+    timeoutInMinutes: 300
+    dependsOn: 'Linux'
+    pool:
+      name: 'azsdk-pool-mms-ubuntu-1804-general'
+      vmImage: 'MMSUbuntu18.04'
+    strategy:
+      matrix:
+        EventHub Python 3.9:
+          PythonVersion: '$(PythonVersion39)'
+          SDK: 'EventHub'
+        EventHub Python 3.10:
+          PythonVersion: '$(PythonVersion310)'
+          SDK: 'EventHub'
+        ServiceBus Python 3.9:
+          PythonVersion: '$(PythonVersion39)'
+          SDK: 'ServiceBus'
+        ServiceBus Python 3.10:
+          PythonVersion: '$(PythonVersion310)'
+          SDK: 'ServiceBus'
+    variables:
+      OSArch: 'Linux'
+      DownloadArtifactFolder: 'uamqp-linux-$(PythonVersion)-whl'
+    steps:
+      - template: /.azure-pipelines/use-python-version.yml
+        parameters:
+          versionSpec: '$(PythonVersion)'
+      - template: /.azure-pipelines/test-eh-sb-sdk.yml

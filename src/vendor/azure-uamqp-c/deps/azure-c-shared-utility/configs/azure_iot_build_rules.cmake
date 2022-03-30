@@ -13,8 +13,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
 option(run_valgrind "set run_valgrind to ON if tests are to be run under valgrind/helgrind/drd. Default is OFF" OFF)
-option(compileOption_C "passes a string to the command line of the C compiler" OFF)
-option(compileOption_CXX "passes a string to the command line of the C++ compiler" OFF)
+set(compileOption_C "" CACHE STRING "passes a string to the command line of the C compiler")
+set(compileOption_CXX "" CACHE STRING "passes a string to the command line of the C++ compiler")
 
 # These are the include folders. (assumes that this file is in a subdirectory of c-utility)
 get_filename_component(SHARED_UTIL_FOLDER ${CMAKE_CURRENT_LIST_DIR} DIRECTORY)
@@ -68,14 +68,8 @@ endif()
 
 # System-specific compiler flags
 if(MSVC)
-    if (WINCE) # Be lax with WEC 2013 compiler
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3")
-        add_definitions(-DWIN32) #WEC 2013
-    ELSE()
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4")
-    endif()
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3")
 elseif(UNIX) #LINUX OR APPLE
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
@@ -116,15 +110,14 @@ if (NOT DEFINED ARCHITECTURE OR ARCHITECTURE STREQUAL "")
 endif()
 message(STATUS "target architecture: ${ARCHITECTURE}")
 
-#if any compiler has a command line switch called "OFF" then it will need special care
-if(NOT "${compileOption_C}" STREQUAL "OFF")
+# if any compiler has a command line switch called "OFF" then it will need special care
+if (NOT "${compileOption_C}" STREQUAL "")
     set(CMAKE_C_FLAGS "${compileOption_C} ${CMAKE_C_FLAGS}")
 endif()
 
-if(NOT "${compileOption_CXX}" STREQUAL "OFF")
+if (NOT "${compileOption_CXX}" STREQUAL "")
     set(CMAKE_CXX_FLAGS "${compileOption_CXX} ${CMAKE_CXX_FLAGS}")
 endif()
-
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" CXX_FLAG_CXX11)
@@ -194,16 +187,28 @@ function(compileTargetAsC11 theTarget)
   endif()
 endfunction()
 
+macro(generate_cpp_wrapper setVar whatIsBuilding)
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${whatIsBuilding}.cxx "#include \"${CMAKE_CURRENT_SOURCE_DIR}/${whatIsBuilding}.c\"")
+  set(${setVar} ${CMAKE_CURRENT_BINARY_DIR}/${whatIsBuilding}.cxx)
+endmacro(generate_cpp_wrapper)
+
+macro(generate_cppunittest_wrapper whatIsBuilding)
+    if (${use_cppunittest} AND WIN32)
+      file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${whatIsBuilding}.cxx "#include \"${CMAKE_CURRENT_SOURCE_DIR}/${whatIsBuilding}.c\"")
+      set(${whatIsBuilding}_test_files ${CMAKE_CURRENT_BINARY_DIR}/${whatIsBuilding}.cxx)
+      #CPP compiler on windows likes to complain about unused local function removed (C4505)
+      #C compiler doesn't like to complain about the same thing
+      set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4505")
+    else()
+      set(${whatIsBuilding}_test_files ${whatIsBuilding}.c)
+    endif()
+endmacro(generate_cppunittest_wrapper)
+
 IF((WIN32) AND (NOT(MINGW)))
     #windows needs this define
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-    IF(WINCE)
-        # Don't treat warning as errors for WEC 2013. WEC 2013 uses older compiler version
-        add_definitions(/WX-)
-    ELSE()
     # Make warning as error
     add_definitions(/WX)
-    ENDIF()
 ELSE()
     # Make warning as error
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")

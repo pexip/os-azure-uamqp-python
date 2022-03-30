@@ -25,16 +25,15 @@ _logger = logging.getLogger(__name__)
 
 cpdef create_sas_token(const char* key, const char* scope, const char* keyname, size_t expiry):
     cdef c_strings.STRING_HANDLE str_value
-    #cdef const char* c_string
     str_value = c_utils.SASToken_CreateString(key, scope, keyname, expiry)
 
     if <void*>str_value == NULL:
         raise ValueError("Failed to create SAS token.")
     if c_utils.SASToken_Validate(str_value) != True:
         raise ValueError("Generated invalid SAS token")
-    return c_strings.STRING_c_str(str_value)
-    #c_strings.STRING_delete(str_value)
-    #return c_string
+    cdef bytes py_str = c_strings.STRING_c_str(str_value)
+    c_strings.STRING_delete(str_value)
+    return py_str
 
 
 cdef class CBSTokenAuth(object):
@@ -53,7 +52,7 @@ cdef class CBSTokenAuth(object):
     cdef const char* connection_id
     cdef cSession _session
 
-    def __cinit__(self, const char* audience, const char* token_type, const char* token, stdint.uint64_t expires_at, cSession session, stdint.uint64_t timeout, const char* connection_id):
+    def __cinit__(self, const char* audience, const char* token_type, const char* token, stdint.uint64_t expires_at, cSession session, stdint.uint64_t timeout, const char* connection_id, stdint.uint64_t refresh_window):
         self.state = AUTH_STATUS_IDLE
         self.audience = audience
         self.token_type = token_type
@@ -62,9 +61,12 @@ cdef class CBSTokenAuth(object):
         self.auth_timeout = timeout
         self.connection_id = connection_id
         self._token_put_time = 0
-        current_time = int(time.time())
-        remaining_time = expires_at - current_time
-        self._refresh_window = int(float(remaining_time) * 0.1)
+        if refresh_window > 0:
+            self._refresh_window = refresh_window
+        else:
+            current_time = int(time.time())
+            remaining_time = expires_at - current_time
+            self._refresh_window = int(float(remaining_time) * 0.1)
         self._cbs_handle = c_cbs.cbs_create(<c_session.SESSION_HANDLE>session._c_value)
         self._session = session
         if <void*>self._cbs_handle == NULL:
@@ -98,13 +100,13 @@ cdef class CBSTokenAuth(object):
         if current_time >= self.expires_at:
             raise ValueError("Token has expired")
         self._token_put_time = current_time
-        if c_cbs.cbs_put_token_async(
+        if <void*>c_cbs.cbs_put_token_async(
                 self._cbs_handle,
                 self.token_type,
                 self.audience,
                 self.token,
                 <c_cbs.ON_CBS_OPERATION_COMPLETE>on_cbs_put_token_complete,
-                <void*>self) != 0:
+                <void*>self) == NULL:
             raise ValueError("Put-Token request failed.")
         else:
             self.state = AUTH_STATUS_IN_PROGRESS
