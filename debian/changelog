@@ -1,3 +1,9 @@
+azure-uamqp-python (1.2.13-1pexip4) pexip-bullseye; urgency=medium
+
+  * Bullseye rebuild for ARM64 inclusion
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Mon, 05 Sep 2022 10:31:10 +0100
+
 azure-uamqp-python (1.2.13-1pexip3) pexip-bullseye; urgency=medium
 
   * Main bullseye build
