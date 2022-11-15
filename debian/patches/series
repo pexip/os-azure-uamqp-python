@@ -1,1 +1,2 @@
 OpenSSL3.patch
+openssl3-deprecations.patch
