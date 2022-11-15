@@ -4,6 +4,9 @@
 # to make the build reproducible we need -ffile-prefix-map
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all reproducible=+fixfilepath
 
+# Required to build with OpenSSL 3.0, can be dropped once upstream fixes it
+export DEB_CFLAGS_MAINT_APPEND=-Wno-error=deprecated-declarations
+
 # CMake is used to build the vendored uamqp library, which ignores CPPFLAGS
 DPKG_EXPORT_BUILDFLAGS = 1
 include /usr/share/dpkg/buildflags.mk
@@ -14,7 +17,5 @@ ifeq (,$(filter terse,$(DEB_BUILD_OPTIONS)))
 export VERBOSE=1
 endif
 
-export PYBUILD_AFTER_CLEAN=rm -rf uamqp.egg-info uamqp/c_uamqp.c uamqp/c_uamqp.pyx
-
 %:
-	dh $@ --with python3 --buildsystem=pybuild
+	dh $@ --buildsystem=pybuild

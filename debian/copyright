@@ -1,11 +1,12 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: uamqp
 
 Files: *
-Copyright: 2018-2020 Microsoft Corporation
+Copyright: 2018-2022 Microsoft Corporation
 License: Expat
 
 Files: debian/*
-Copyright: 2020 Luca Boccassi <luca.boccassi@microsoft.com>
+Copyright: 2020-2022 Luca Boccassi <luca.boccassi@microsoft.com>
 License: Expat
 
 License: Expat

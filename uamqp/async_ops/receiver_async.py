@@ -8,7 +8,7 @@ import logging
 import asyncio
 
 from uamqp import constants, errors, receiver
-from uamqp.utils import get_running_loop
+from uamqp.async_ops.utils import get_dict_with_loop_if_needed
 
 _logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class MessageReceiverAsync(receiver.MessageReceiver):
      the client will not wait for confirmation and assume success.
     :type send_settle_mode: ~uamqp.constants.SenderSettleMode
     :param desired_capabilities: The extension capabilities desired from the peer endpoint.
-     To create an desired_capabilities object, please do as follows:
+     To create a desired_capabilities object, please do as follows:
         - 1. Create an array of desired capability symbols: `capabilities_symbol_array = [types.AMQPSymbol(string)]`
         - 2. Transform the array to AMQPValue object: `utils.data_factory(types.AMQPArray(capabilities_symbol_array))`
     :type desired_capabilities: ~uamqp.c_uamqp.AMQPValue
@@ -71,8 +71,6 @@ class MessageReceiverAsync(receiver.MessageReceiver):
     :param encoding: The encoding to use for parameters supplied as strings.
      Default is 'UTF-8'
     :type encoding: str
-    :param loop: A user specified event loop.
-    :type loop: ~asycnio.AbstractEventLoop
     """
 
     def __init__(self, session, source, target,
@@ -88,7 +86,7 @@ class MessageReceiverAsync(receiver.MessageReceiver):
                  encoding='UTF-8',
                  desired_capabilities=None,
                  loop=None):
-        self.loop = loop or get_running_loop()
+        self._internal_kwargs = get_dict_with_loop_if_needed(loop)
         super(MessageReceiverAsync, self).__init__(
             session, source, target,
             on_message_received,
@@ -112,6 +110,10 @@ class MessageReceiverAsync(receiver.MessageReceiver):
         """Close the MessageReceiver when exiting an async context manager."""
         await self.destroy_async()
 
+    @property
+    def loop(self):
+        return self._internal_kwargs.get("loop")
+
     async def destroy_async(self):
         """Asynchronously close both the Receiver and the Link. Clean up any C objects."""
         self.destroy()
@@ -133,7 +135,7 @@ class MessageReceiverAsync(receiver.MessageReceiver):
 
     async def work_async(self):
         """Update the link status."""
-        await asyncio.sleep(0, loop=self.loop)
+        await asyncio.sleep(0, **self._internal_kwargs)
         self._link.do_work()
 
     async def reset_link_credit_async(self, link_credit, **kwargs):
@@ -142,7 +144,7 @@ class MessageReceiverAsync(receiver.MessageReceiver):
         :param link_credit: The link credit amount that is requested.
         :type link_credit: int
         """
-        await asyncio.sleep(0, loop=self.loop)
+        await asyncio.sleep(0, **self._internal_kwargs)
         drain = kwargs.get("drain", False)
         self._link.reset_link_credit(link_credit, drain)
 

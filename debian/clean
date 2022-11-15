@@ -1,0 +1,3 @@
+uamqp.egg-info/
+uamqp/c_uamqp.c
+uamqp/c_uamqp.pyx

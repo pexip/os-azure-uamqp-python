@@ -11,9 +11,9 @@ import datetime
 import logging
 
 from uamqp import c_uamqp, compat, constants, errors
-from uamqp.utils import get_running_loop
 from uamqp.async_ops import SessionAsync
 from uamqp.constants import TransportType
+from uamqp.async_ops.utils import get_dict_with_loop_if_needed
 
 from .cbs_auth import CBSAuthMixin, SASTokenAuth, JWTTokenAuth, TokenRetryPolicy
 
@@ -36,6 +36,10 @@ def is_coroutine(get_token):
 class CBSAsyncAuthMixin(CBSAuthMixin):
     """Mixin to handle sending and refreshing CBS auth tokens asynchronously."""
 
+    @property
+    def loop(self):
+        return self._internal_kwargs.get("loop")
+
     async def create_authenticator_async(self, connection, debug=False, loop=None, **kwargs):
         """Create the async AMQP session and the CBS channel with which
         to negotiate the token.
@@ -46,16 +50,12 @@ class CBSAsyncAuthMixin(CBSAuthMixin):
         :param debug: Whether to emit network trace logging events for the
          CBS session. Default is `False`. Logging events are set at INFO level.
         :type debug: bool
-        :param loop: A user specified event loop.
-        :type loop: ~asycnio.AbstractEventLoop
         :rtype: uamqp.c_uamqp.CBSTokenAuth
         """
-        self.loop = loop or get_running_loop()
+        self._internal_kwargs = get_dict_with_loop_if_needed(loop)
         self._connection = connection
-        self._session = SessionAsync(connection, loop=self.loop, **kwargs)
-
-        if self.token_type == b'jwt':  # Async initialize the jwt token
-            await self.update_token()
+        kwargs.update(self._internal_kwargs)
+        self._session = SessionAsync(connection, **kwargs)
 
         try:
             self._cbs_auth = c_uamqp.CBSTokenAuth(
@@ -65,7 +65,9 @@ class CBSAsyncAuthMixin(CBSAuthMixin):
                 int(self.expires_at),
                 self._session._session,  # pylint: disable=protected-access
                 self.timeout,
-                self._connection.container_id)
+                self._connection.container_id,
+                self._refresh_window
+            )
             self._cbs_auth.set_trace(debug)
         except ValueError:
             await self._session.destroy_async()
@@ -117,7 +119,7 @@ class CBSAsyncAuthMixin(CBSAuthMixin):
                 _logger.info("Authentication status: %r, description: %r", error_code, error_description)
                 _logger.info("Authentication Put-Token failed. Retrying.")
                 self.retries += 1  # pylint: disable=no-member
-                await asyncio.sleep(self._retry_policy.backoff, loop=self.loop)
+                await asyncio.sleep(self._retry_policy.backoff, **self._internal_kwargs)
                 self._cbs_auth.authenticate()
                 in_progress = True
             elif auth_status == constants.CBSAuthStatus.Failure:
@@ -132,7 +134,14 @@ class CBSAsyncAuthMixin(CBSAuthMixin):
                 _logger.info("Token on connection %r will expire soon - attempting to refresh.",
                              self._connection.container_id)
                 await self.update_token()
-                self._cbs_auth.refresh(self.token, int(self.expires_at))
+                if self.token != self._prev_token:
+                    self._cbs_auth.refresh(self.token, int(self.expires_at))
+                else:
+                    _logger.info(
+                        "The newly acquired token on connection %r is the same as the previous one,"
+                        " will keep attempting to refresh",
+                        self._connection.container_id
+                    )
             elif auth_status == constants.CBSAuthStatus.Idle:
                 self._cbs_auth.authenticate()
                 in_progress = True
@@ -196,6 +205,9 @@ class SASTokenAsync(SASTokenAuth, CBSAsyncAuthMixin):
     :param encoding: The encoding to use if hostname is provided as a str.
      Default is 'UTF-8'.
     :type encoding: str
+    :keyword int refresh_window: The time in seconds before the token expiration
+     time to start the process of token refresh.
+     Default value is 10% of the remaining seconds until the token expires.
     """
     async def update_token(self):  # pylint: disable=useless-super-delegation
         super(SASTokenAsync, self).update_token()
@@ -243,27 +255,33 @@ class JWTTokenAsync(JWTTokenAuth, CBSAsyncAuthMixin):
     :param encoding: The encoding to use if hostname is provided as a str.
      Default is 'UTF-8'.
     :type encoding: str
+    :keyword int refresh_window: The time in seconds before the token expiration
+     time to start the process of token refresh.
+     Default value is 10% of the remaining seconds until the token expires.
     """
 
     def __init__(self, audience, uri,
                  get_token,
                  expires_in=datetime.timedelta(seconds=constants.AUTH_EXPIRATION_SECS),
                  expires_at=None,
-                 port=constants.DEFAULT_AMQPS_PORT,
+                 port=None,
                  timeout=10,
                  retry_policy=TokenRetryPolicy(),
                  verify=None,
                  token_type=b"jwt",
                  http_proxy=None,
                  transport_type=TransportType.Amqp,
-                 encoding='UTF-8'):  # pylint: disable=no-member
+                 encoding='UTF-8',
+                 **kwargs):  # pylint: disable=no-member
         self._retry_policy = retry_policy
         self._encoding = encoding
+        self._refresh_window = kwargs.pop("refresh_window", 0)
+        self._prev_token = None
         self.uri = uri
         parsed = compat.urlparse(uri)  # pylint: disable=no-member
 
         self.cert_file = verify
-        self.hostname = parsed.hostname.encode(self._encoding)
+        self.hostname = (kwargs.get("custom_endpoint_hostname") or parsed.hostname).encode(self._encoding)
 
         is_coroutine(get_token)
 
@@ -277,7 +295,12 @@ class JWTTokenAsync(JWTTokenAuth, CBSAsyncAuthMixin):
         self.sasl = _SASL()
         self.set_io(self.hostname, port, http_proxy, transport_type)
 
+    async def create_authenticator_async(self, connection, debug=False, loop=None, **kwargs):
+        await self.update_token()
+        return await super(JWTTokenAsync, self).create_authenticator_async(connection, debug, **kwargs)
+
     async def update_token(self):
         access_token = await self.get_token()
         self.expires_at = access_token.expires_on
+        self._prev_token = self.token
         self.token = self._encode(access_token.token)

@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include "azure_c_shared_utility/uniqueid.h"
 #include "azure_c_shared_utility/xlogging.h"
-#include <rpc.h>
+#include "rpc.h"
 
-DEFINE_ENUM_STRINGS(UNIQUEID_RESULT, UNIQUEID_RESULT_VALUES);
+MU_DEFINE_ENUM_STRINGS(UNIQUEID_RESULT, UNIQUEID_RESULT_VALUES);
 
 UNIQUEID_RESULT UniqueId_Generate(char* uid, size_t len)
 {
@@ -48,7 +48,7 @@ UNIQUEID_RESULT UniqueId_Generate(char* uid, size_t len)
                 {
                     cpyLen = len - 1;
                 }
-                (void)memcpy(uid, randomResult, len);
+                (void)memcpy(uid, randomResult, cpyLen);
                 RpcStringFreeA(&randomResult);
                 result = UNIQUEID_OK;
             }

@@ -8,7 +8,7 @@ import logging
 import asyncio
 
 from uamqp import constants, errors, sender
-from uamqp.utils import get_running_loop
+from uamqp.async_ops.utils import get_dict_with_loop_if_needed
 
 _logger = logging.getLogger(__name__)
 
@@ -55,6 +55,11 @@ class MessageSenderAsync(sender.MessageSender):
      will assume successful receipt of the message and clear it from the queue. The
      default is `PeekLock`.
     :type receive_settle_mode: ~uamqp.constants.ReceiverSettleMode
+    :param desired_capabilities: The extension capabilities desired from the peer endpoint.
+     To create a desired_capabilities object, please do as follows:
+        - 1. Create an array of desired capability symbols: `capabilities_symbol_array = [types.AMQPSymbol(string)]`
+        - 2. Transform the array to AMQPValue object: `utils.data_factory(types.AMQPArray(capabilities_symbol_array))`
+    :type desired_capabilities: ~uamqp.c_uamqp.AMQPValue
     :param max_message_size: The maximum allowed message size negotiated for the Link.
     :type max_message_size: int
     :param link_credit: The sender Link credit that determines how many
@@ -71,8 +76,6 @@ class MessageSenderAsync(sender.MessageSender):
     :param encoding: The encoding to use for parameters supplied as strings.
      Default is 'UTF-8'
     :type encoding: str
-    :param loop: A user specified event loop.
-    :type loop: ~asycnio.AbstractEventLoop
     """
 
     def __init__(self, session, source, target,
@@ -85,8 +88,9 @@ class MessageSenderAsync(sender.MessageSender):
                  error_policy=None,
                  debug=False,
                  encoding='UTF-8',
+                 desired_capabilities=None,
                  loop=None):
-        self.loop = loop or get_running_loop()
+        self._internal_kwargs = get_dict_with_loop_if_needed(loop)
         super(MessageSenderAsync, self).__init__(
             session, source, target,
             name=name,
@@ -97,7 +101,8 @@ class MessageSenderAsync(sender.MessageSender):
             properties=properties,
             error_policy=error_policy,
             debug=debug,
-            encoding=encoding)
+            encoding=encoding,
+            desired_capabilities=desired_capabilities)
 
     async def __aenter__(self):
         """Open the MessageSender in an async context manager."""
@@ -107,6 +112,10 @@ class MessageSenderAsync(sender.MessageSender):
     async def __aexit__(self, *args):
         """Close the MessageSender when exiting an async context manager."""
         await self.destroy_async()
+
+    @property
+    def loop(self):
+        return self._internal_kwargs.get("loop")
 
     async def destroy_async(self):
         """Asynchronously close both the Sender and the Link. Clean up any C objects."""
@@ -160,7 +169,7 @@ class MessageSenderAsync(sender.MessageSender):
 
     async def work_async(self):
         """Update the link status."""
-        await asyncio.sleep(0, loop=self.loop)
+        await asyncio.sleep(0, **self._internal_kwargs)
         self._link.do_work()
 
     async def close_async(self):
