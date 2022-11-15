@@ -62,9 +62,6 @@ class CBSAuthMixin(object):
         self._connection = connection
         self._session = Session(connection, **kwargs)
 
-        if self.token_type == b'jwt':  # Initialize the jwt token
-            self.update_token()
-
         try:
             self._cbs_auth = c_uamqp.CBSTokenAuth(
                 self.audience,
@@ -73,7 +70,9 @@ class CBSAuthMixin(object):
                 int(self.expires_at),
                 self._session._session,  # pylint: disable=protected-access
                 self.timeout,
-                self._connection.container_id)
+                self._connection.container_id,
+                self._refresh_window
+            )
             self._cbs_auth.set_trace(debug)
         except ValueError:
             self._session.destroy()
@@ -140,7 +139,14 @@ class CBSAuthMixin(object):
                 _logger.info("Token on connection %r will expire soon - attempting to refresh.",
                              self._connection.container_id)
                 self.update_token()
-                self._cbs_auth.refresh(self.token, int(self.expires_at))
+                if self.token != self._prev_token:
+                    self._cbs_auth.refresh(self.token, int(self.expires_at))
+                else:
+                    _logger.info(
+                        "The newly acquired token on connection %r is the same as the previous one,"
+                        " will keep attempting to refresh",
+                        self._connection.container_id
+                    )
             elif auth_status == constants.CBSAuthStatus.Idle:
                 self._cbs_auth.authenticate()
                 in_progress = True
@@ -216,6 +222,9 @@ class SASTokenAuth(AMQPAuth, CBSAuthMixin):
     :param encoding: The encoding to use if hostname is provided as a str.
      Default is 'UTF-8'.
     :type encoding: str
+    :keyword int refresh_window: The time in seconds before the token expiration
+     time to start the process of token refresh.
+     Default value is 10% of the remaining seconds until the token expires.
     """
 
     def __init__(self, audience, uri, token,
@@ -223,21 +232,24 @@ class SASTokenAuth(AMQPAuth, CBSAuthMixin):
                  expires_at=None,
                  username=None,
                  password=None,
-                 port=constants.DEFAULT_AMQPS_PORT,
+                 port=None,
                  timeout=10,
                  retry_policy=TokenRetryPolicy(),
                  verify=None,
                  token_type=b"servicebus.windows.net:sastoken",
                  http_proxy=None,
                  transport_type=TransportType.Amqp,
-                 encoding='UTF-8'):  # pylint: disable=no-member
+                 encoding='UTF-8',
+                 **kwargs):  # pylint: disable=no-member
         self._retry_policy = retry_policy
         self._encoding = encoding
+        self._refresh_window = kwargs.pop("refresh_window", 0)
+        self._prev_token = None
         self.uri = uri
         parsed = compat.urlparse(uri)  # pylint: disable=no-member
 
         self.cert_file = verify
-        self.hostname = parsed.hostname.encode(self._encoding)
+        self.hostname = (kwargs.get("custom_endpoint_hostname") or parsed.hostname).encode(self._encoding)
         self.username = compat.unquote_plus(parsed.username) if parsed.username else None  # pylint: disable=no-member
         self.password = compat.unquote_plus(parsed.password) if parsed.password else None  # pylint: disable=no-member
 
@@ -261,6 +273,7 @@ class SASTokenAuth(AMQPAuth, CBSAuthMixin):
         encoded_uri = compat.quote_plus(self.uri).encode(self._encoding)  # pylint: disable=no-member
         encoded_key = compat.quote_plus(self.username).encode(self._encoding)  # pylint: disable=no-member
         self.expires_at = time.time() + self.expires_in.seconds
+        self._prev_token = self.token
         self.token = utils.create_sas_token(
             encoded_key,
             self.password.encode(self._encoding),
@@ -274,13 +287,14 @@ class SASTokenAuth(AMQPAuth, CBSAuthMixin):
             key_name,
             shared_access_key,
             expiry=None,
-            port=constants.DEFAULT_AMQPS_PORT,
+            port=None,
             timeout=10,
             retry_policy=TokenRetryPolicy(),
             verify=None,
             http_proxy=None,
             transport_type=TransportType.Amqp,
-            encoding='UTF-8'):
+            encoding='UTF-8',
+            **kwargs):
         """Attempt to create a CBS token session using a Shared Access Key such
         as is used to connect to Azure services.
 
@@ -315,6 +329,9 @@ class SASTokenAuth(AMQPAuth, CBSAuthMixin):
         :param encoding: The encoding to use if hostname is provided as a str.
          Default is 'UTF-8'.
         :type encoding: str
+        :keyword int refresh_window: The time in seconds before the token expiration
+        time to start the process of token refresh.
+        Default value is 10% of the remaining seconds until the token expires.
         """
         expires_in = datetime.timedelta(seconds=expiry or constants.AUTH_EXPIRATION_SECS)
         encoded_uri = compat.quote_plus(uri).encode(encoding)  # pylint: disable=no-member
@@ -337,7 +354,8 @@ class SASTokenAuth(AMQPAuth, CBSAuthMixin):
             verify=verify,
             http_proxy=http_proxy,
             transport_type=transport_type,
-            encoding=encoding)
+            encoding=encoding,
+            custom_endpoint_hostname=kwargs.pop("custom_endpoint_hostname", None))
 
 
 class JWTTokenAuth(AMQPAuth, CBSAuthMixin):
@@ -382,27 +400,33 @@ class JWTTokenAuth(AMQPAuth, CBSAuthMixin):
     :param encoding: The encoding to use if hostname is provided as a str.
      Default is 'UTF-8'.
     :type encoding: str
+    :keyword int refresh_window: The time in seconds before the token expiration
+     time to start the process of token refresh.
+     Default value is 10% of the remaining seconds until the token expires.
     """
 
     def __init__(self, audience, uri,
                  get_token,
                  expires_in=datetime.timedelta(seconds=constants.AUTH_EXPIRATION_SECS),
                  expires_at=None,
-                 port=constants.DEFAULT_AMQPS_PORT,
+                 port=None,
                  timeout=10,
                  retry_policy=TokenRetryPolicy(),
                  verify=None,
                  token_type=b"jwt",
                  http_proxy=None,
                  transport_type=TransportType.Amqp,
-                 encoding='UTF-8'):  # pylint: disable=no-member
+                 encoding='UTF-8',
+                 **kwargs):  # pylint: disable=no-member
         self._retry_policy = retry_policy
         self._encoding = encoding
+        self._refresh_window = kwargs.pop("refresh_window", 0)
+        self._prev_token = None
         self.uri = uri
         parsed = compat.urlparse(uri)  # pylint: disable=no-member
 
         self.cert_file = verify
-        self.hostname = parsed.hostname.encode(self._encoding)
+        self.hostname = (kwargs.get("custom_endpoint_hostname") or parsed.hostname).encode(self._encoding)
 
         if not get_token or not callable(get_token):
             raise ValueError("get_token must be a callable object.")
@@ -417,7 +441,12 @@ class JWTTokenAuth(AMQPAuth, CBSAuthMixin):
         self.sasl = _SASL()
         self.set_io(self.hostname, port, http_proxy, transport_type)
 
+    def create_authenticator(self, connection, debug=False, **kwargs):
+        self.update_token()
+        return super(JWTTokenAuth, self).create_authenticator(connection, debug, **kwargs)
+
     def update_token(self):
         access_token = self.get_token()
         self.expires_at = access_token.expires_on
+        self._prev_token = self.token
         self.token = self._encode(access_token.token)

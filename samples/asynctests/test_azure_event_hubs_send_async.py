@@ -7,12 +7,17 @@
 import os
 import logging
 import asyncio
+import time
+from datetime import timedelta
 import pytest
 import sys
 import types
+import collections
 
 import uamqp
-from uamqp import authentication
+from uamqp import types as uamqp_types, utils, authentication, constants
+
+_AccessToken = collections.namedtuple("AccessToken", "token expires_on")
 
 
 def get_logger(level):
@@ -156,6 +161,140 @@ async def test_event_hubs_send_timeout_async(live_eventhub_config):
     await send_client.close_async()
 
 
+@pytest.mark.asyncio
+async def test_event_hubs_custom_end_point():
+    sas_token = authentication.SASTokenAsync("fake_audience", "fake_uri", "fake_token", expires_in=timedelta(10), custom_endpoint_hostname="123.45.67.89")
+    assert sas_token.hostname == b"123.45.67.89"
+
+    sas_token = authentication.SASTokenAsync.from_shared_access_key("fake_uri", "fake_key_name", "fake_key", custom_endpoint_hostname="123.45.67.89")
+    assert sas_token.hostname == b"123.45.67.89"
+
+    async def fake_get_token():
+        return "fake get token"
+
+    jwt_token = authentication.JWTTokenAsync("fake_audience", "fake_uri", fake_get_token, custom_endpoint_hostname="123.45.67.89")
+    assert jwt_token.hostname == b"123.45.67.89"
+
+
+@pytest.mark.asyncio
+async def test_event_hubs_idempotent_producer(live_eventhub_config):
+
+    uri = "sb://{}/{}".format(live_eventhub_config['hostname'], live_eventhub_config['event_hub'])
+    sas_auth = authentication.SASTokenAsync.from_shared_access_key(
+        uri, live_eventhub_config['key_name'], live_eventhub_config['access_key'])
+
+    target = "amqps://{}/{}/Partitions/0".format(live_eventhub_config['hostname'], live_eventhub_config['event_hub'])
+
+    symbol_array = [uamqp_types.AMQPSymbol(b"com.microsoft:idempotent-producer")]
+    desired_capabilities = utils.data_factory(uamqp_types.AMQPArray(symbol_array))
+
+    link_properties = {
+        uamqp_types.AMQPSymbol(b"com.microsoft:timeout"): uamqp_types.AMQPLong(int(60 * 1000))
+    }
+
+    def on_attach(attach_source, attach_target, properties, error):
+        if str(attach_target) == target:
+            on_attach.owner_level = properties.get(b"com.microsoft:producer-epoch")
+            on_attach.producer_group_id = properties.get(b"com.microsoft:producer-id")
+            on_attach.starting_sequence_number = properties.get(b"com.microsoft:producer-sequence-number")
+
+    send_client = uamqp.SendClientAsync(
+        target,
+        auth=sas_auth,
+        desired_capabilities=desired_capabilities,
+        link_properties=link_properties,
+        on_attach=on_attach,
+        debug=True
+    )
+    await send_client.open_async()
+    while not await send_client.client_ready_async():
+        await asyncio.sleep(0.05)
+
+    assert on_attach.owner_level is not None
+    assert on_attach.producer_group_id is not None
+    assert on_attach.starting_sequence_number is not None
+    await send_client.close_async()
+
+
+@pytest.mark.asyncio
+async def test_event_hubs_send_large_message_after_socket_lost(live_eventhub_config):
+    uri = "sb://{}/{}".format(live_eventhub_config['hostname'], live_eventhub_config['event_hub'])
+    sas_auth = authentication.SASTokenAsync.from_shared_access_key(
+        uri, live_eventhub_config['key_name'], live_eventhub_config['access_key'])
+
+    target = "amqps://{}/{}".format(live_eventhub_config['hostname'], live_eventhub_config['event_hub'])
+    send_client = uamqp.SendClientAsync(target, auth=sas_auth, debug=True)
+    try:
+        await send_client.open_async()
+        while not await send_client.client_ready_async():
+            await send_client.do_work_async()
+        # the connection idle timeout setting on the EH service is 240s, after 240s no activity
+        # on the connection, the service would send detach to the client, the underlying socket on the client
+        # is still able to work to receive the frame.
+        # HOWEVER, after no activity on the client socket > 300s, the underlying socket would get completely lost:
+        # the socket reports "Failure: sending socket failed 10054" on windows
+        # or "Failure: sending socket failed. errno=104" on linux which indicates the socket is lost
+        await asyncio.sleep(350)
+
+        with pytest.raises(uamqp.errors.AMQPConnectionError):
+            await send_client.send_message_async(uamqp.message.Message(b't'*1024*700))
+    finally:
+        await send_client.close_async()
+
+
+@pytest.mark.asyncio
+async def test_event_hubs_send_override_token_refresh_window(live_eventhub_config):
+    uri = "sb://{}/{}".format(live_eventhub_config['hostname'], live_eventhub_config['event_hub'])
+    target = "amqps://{}/{}/Partitions/0".format(live_eventhub_config['hostname'], live_eventhub_config['event_hub'])
+    token = None
+
+    async def get_token():
+        nonlocal token
+        return _AccessToken(token, expiry)
+
+    jwt_auth = authentication.JWTTokenAsync(
+        uri,
+        uri,
+        get_token,
+        refresh_window=300  # set refresh window to be 5 mins
+    )
+
+    send_client = uamqp.SendClientAsync(target, auth=jwt_auth, debug=False)
+
+    # use token of which the valid remaining time < refresh window
+    expiry = int(time.time()) + (60 * 4 + 30)  # 4.5 minutes
+    token = utils.create_sas_token(
+        live_eventhub_config['key_name'].encode(),
+        live_eventhub_config['access_key'].encode(),
+        uri.encode(),
+        expiry=timedelta(minutes=4, seconds=30)
+    )
+
+    for _ in range(3):
+        message = uamqp.message.Message(body='Hello World')
+        await send_client.send_message_async(message)
+
+    auth_status = constants.CBSAuthStatus(jwt_auth._cbs_auth.get_status())
+    assert auth_status == constants.CBSAuthStatus.RefreshRequired
+
+    # update token, the valid remaining time > refresh window
+    expiry = int(time.time()) + (60 * 5 + 30)  # 5.5 minutes
+    token = utils.create_sas_token(
+        live_eventhub_config['key_name'].encode(),
+        live_eventhub_config['access_key'].encode(),
+        uri.encode(),
+        expiry=timedelta(minutes=5, seconds=30)
+    )
+
+    for _ in range(3):
+        message = uamqp.message.Message(body='Hello World')
+        await send_client.send_message_async(message)
+
+    auth_status = constants.CBSAuthStatus(jwt_auth._cbs_auth.get_status())
+    assert auth_status == constants.CBSAuthStatus.Ok
+    await send_client.close_async()
+
+
 if __name__ == '__main__':
     config = {}
     config['hostname'] = os.environ['EVENT_HUB_HOSTNAME']
@@ -166,4 +305,4 @@ if __name__ == '__main__':
     config['partition'] = "0"
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(test_event_hubs_send_timeout_async(config))
+    loop.run_until_complete(test_event_hubs_send_override_token_refresh_window(config))

@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
-#include "azure_c_shared_utility/optimize_size.h"
+#include "azure_macro_utils/macro_utils.h"
 #include "azure_c_shared_utility/gballoc.h"
 #include "azure_c_shared_utility/xlogging.h"
 #include "azure_c_shared_utility/uuid.h"
@@ -39,7 +39,7 @@ static int string_concat(char** string, const char* to_concat)
     if (new_string == NULL)
     {
         LogError("Cannot allocate memory for the new string");
-        result = __FAILURE__;
+        result = MU_FAILURE;
     }
     else
     {
@@ -551,7 +551,7 @@ char* amqpvalue_to_string(AMQP_VALUE amqp_value)
                         else
                         {
                             char* value_string = amqpvalue_to_string(value);
-                            if (key_string == NULL)
+                            if (value_string == NULL)
                             {
                                 LogError("Failure getting stringified value for index %u", (unsigned int)i);
                                 free(key_string);

@@ -985,7 +985,7 @@ static void on_link_redirect_received(void* context, ERROR_HANDLE error)
     *redirect_received = true;
 }
 
-static bool on_new_link_attached_link_redirect(void* context, LINK_ENDPOINT_HANDLE new_link_endpoint, const char* name, role role, AMQP_VALUE source, AMQP_VALUE target)
+static bool on_new_link_attached_link_redirect(void* context, LINK_ENDPOINT_HANDLE new_link_endpoint, const char* name, role role, AMQP_VALUE source, AMQP_VALUE target, fields properties)
 {
     SERVER_SESSION* server_session = (SERVER_SESSION*)context;
 	struct SERVER_INSTANCE_TAG* server = (struct SERVER_INSTANCE_TAG*)server_session->server;
@@ -1000,6 +1000,7 @@ static bool on_new_link_attached_link_redirect(void* context, LINK_ENDPOINT_HAND
     AMQP_VALUE port_value = amqpvalue_create_ushort(test_redirect_port);
     AMQP_VALUE address_value = amqpvalue_create_string(test_redirect_address);
 
+    (void)properties;
     (void)amqpvalue_set_map_value(redirect_map, hostname_key, hostname_value);
     (void)amqpvalue_set_map_value(redirect_map, network_host_key, network_host_value);
     (void)amqpvalue_set_map_value(redirect_map, port_key, port_value);
@@ -1474,7 +1475,8 @@ TEST_FUNCTION(client_and_server_connect_and_send_one_message_with_all_message_pa
     delivery_annotations delivery_annotations_map;
     AMQP_VALUE delivery_annotations_key_1;
     AMQP_VALUE delivery_annotations_value_1;
-    message_annotations message_annotations_map;
+    AMQP_VALUE message_annotations_map;
+    message_annotations message_annotations_instance;
     AMQP_VALUE message_annotations_key_1;
     AMQP_VALUE message_annotations_value_1;
     PROPERTIES_HANDLE message_properties;
@@ -1570,8 +1572,11 @@ TEST_FUNCTION(client_and_server_connect_and_send_one_message_with_all_message_pa
     ASSERT_IS_NOT_NULL(message_annotations_value_1, "Could not create message annotations value 1");
     result = amqpvalue_set_map_value(message_annotations_map, message_annotations_key_1, message_annotations_value_1);
     ASSERT_ARE_EQUAL(int, 0, result, "cannot set value in message annotations map");
-    result = message_set_message_annotations(client_send_message, message_annotations_map);
+    message_annotations_instance = (message_annotations)amqpvalue_create_message_annotations(message_annotations_map);
+    ASSERT_IS_NOT_NULL(message_annotations_instance, "Could not create message annotations");
+    result = message_set_message_annotations(client_send_message, message_annotations_instance);
     ASSERT_ARE_EQUAL(int, 0, result, "cannot set message annotations");
+    annotations_destroy(message_annotations_instance);
     amqpvalue_destroy(message_annotations_map);
     amqpvalue_destroy(message_annotations_key_1);
     amqpvalue_destroy(message_annotations_value_1);
