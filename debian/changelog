@@ -1,4 +1,4 @@
-azure-uamqp-python (1.5.3-1pexip1) pexip; urgency=medium
+azure-uamqp-python (1.5.3-1pexip1) pexip-bullseye-openssl3; urgency=medium
 
   * New upstream release
 
