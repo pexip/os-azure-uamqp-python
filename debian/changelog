@@ -1,3 +1,9 @@
+azure-uamqp-python (1.5.3-1+b4+pexip24u2) pexip-bookworm; urgency=medium
+
+  * New versioning scheme
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Thu, 01 Feb 2024 15:52:08 +0000
+
 azure-uamqp-python (1.5.3-1+b4pexip1) pexip-bookworm; urgency=medium
 
   * Bump version to supersede Debian point release binNMU.
