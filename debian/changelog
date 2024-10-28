@@ -1,3 +1,88 @@
+azure-uamqp-python (1.6.11-1) unstable; urgency=medium
+
+  * Team upload.
+  * New upstream version
+  * Drop CVE patch that was applied upstream.
+  * d/control: switch to cython3
+
+ -- Michael R. Crusoe <crusoe@debian.org>  Tue, 29 Oct 2024 00:26:15 +0100
+
+azure-uamqp-python (1.6.10-1) unstable; urgency=medium
+
+  [ Alexandre Detiste ]
+  * trim autopkgtest deps
+
+  [ Luca Boccassi ]
+  * Update upstream source from tag 'upstream/1.6.10'
+  * Drop CVE-2024-27099.patch, merged upstream
+  * d/control: bump Standards-Version to 4.7.0, no changes
+  * autopkgtest: ignore stderr due to external python warnings
+
+ -- Luca Boccassi <bluca@debian.org>  Fri, 25 Oct 2024 10:26:54 +0100
+
+azure-uamqp-python (1.6.9-3) unstable; urgency=medium
+
+  * Add -Wno-error=incompatible-pointer-types to please GCC 24
+    (Closes: #1074834).
+
+ -- Thomas Goirand <zigo@debian.org>  Tue, 06 Aug 2024 16:56:55 +0200
+
+azure-uamqp-python (1.6.9-2) unstable; urgency=high
+
+  * Team upload.
+  * CVE-2024-29195: An attacker can cause an integer wraparound or under-
+    allocation or heap buffer overflow due to vulnerabilities in parameter
+    checking mechanism, by exploiting the buffer length parameter in Azure C
+    SDK, which may lead to remote code execution. Applied upstream patch:
+    CVE-2024-29195_Add-malloc-size-checks.patch (Closes: #1068457).
+
+ -- Thomas Goirand <zigo@debian.org>  Wed, 17 Apr 2024 14:08:51 +0200
+
+azure-uamqp-python (1.6.9-1) unstable; urgency=medium
+
+  * Team upload.
+  * New upstream version
+  * d/patches/CVE-2024-25110: removed, applied upstream.
+
+ -- Michael R. Crusoe <crusoe@debian.org>  Thu, 21 Mar 2024 10:45:35 +0100
+
+azure-uamqp-python (1.6.8-2) unstable; urgency=medium
+
+  * Team upload.
+  * d/patches/no-distutils: remove useage of distutils for Python 3.12.
+  * d/patches: cherry-pick two patches from upstream's upstream to fix
+    CVE-2024-25110 and CVE-2024-27099. Closes: #1064996, #1064996
+
+ -- Michael R. Crusoe <crusoe@debian.org>  Sun, 10 Mar 2024 17:09:57 +0100
+
+azure-uamqp-python (1.6.8-1) unstable; urgency=medium
+
+  * Update upstream source from tag 'upstream/1.6.8'
+
+ -- Luca Boccassi <bluca@debian.org>  Thu, 08 Feb 2024 19:47:29 +0000
+
+azure-uamqp-python (1.6.5-2) unstable; urgency=medium
+
+  * Build depend on cython3-legacy (Closes: #1056791)
+
+ -- Luca Boccassi <bluca@debian.org>  Mon, 01 Jan 2024 19:41:10 +0100
+
+azure-uamqp-python (1.6.5-1) unstable; urgency=medium
+
+  * Update upstream source from tag 'upstream/1.6.5'
+
+ -- Luca Boccassi <bluca@debian.org>  Mon, 31 Jul 2023 21:08:32 +0100
+
+azure-uamqp-python (1.6.4-1) unstable; urgency=medium
+
+  * Update upstream source from tag 'upstream/1.6.4' (Closes: #1039448)
+  * Drop OpenSSL3.patch, fixed upstream
+  * Bump Standards-Version to 4.6.2, no changes
+  * Bump copyright year ranges in d/copyright
+  * Drop dependency on python3-six, no longer required
+
+ -- Luca Boccassi <bluca@debian.org>  Fri, 07 Jul 2023 19:45:15 +0100
+
 azure-uamqp-python (1.5.3-1) unstable; urgency=medium
 
   [ Debian Janitor ]

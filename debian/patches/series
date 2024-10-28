@@ -1,1 +1,2 @@
-OpenSSL3.patch
+no-distutils
+cy3

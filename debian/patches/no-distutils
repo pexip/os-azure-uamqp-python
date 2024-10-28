@@ -1,0 +1,38 @@
+From: Michael R. Crusoe <crusoe@debian.org>
+Subject: Don't use the deprecated distutils
+
+It isn't available in Python 3.12
+
+--- azure-uamqp-python.orig/setup.py
++++ azure-uamqp-python/setup.py
+@@ -7,14 +7,13 @@
+ import os
+ import sys
+ import re
+-import distutils
+ import subprocess
+ import platform
+ from setuptools import find_packages, monkey, setup, Extension
+ from setuptools.command.build_ext import build_ext as build_ext_orig
+-from distutils.extension import Extension
+-from distutils.version import LooseVersion
+-from distutils import log as logger
++import logging 
++
++logger = logging.getLogger()
+ 
+ try:
+     from Cython.Build import cythonize
+@@ -101,12 +100,6 @@
+     return " ".join(flags)
+ 
+ 
+-def get_msvc_env(vc_ver):
+-    arch = "amd64" if is_x64 else "x86"
+-    msvc_env = distutils.msvc9compiler.query_vcvarsall(vc_ver, arch)
+-    return {str(k.upper()): str(v) for k, v in msvc_env.items()}
+-
+-
+ # Compile uamqp
+ # Inspired by https://stackoverflow.com/a/48015772/4074838
+ 

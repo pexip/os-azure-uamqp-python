@@ -12,8 +12,7 @@ Build-Depends: cmake,
                python3-pytest <!nocheck>,
                python3-pytest-asyncio <!nocheck>,
                python3-setuptools,
-               python3-six,
-Standards-Version: 4.6.0
+Standards-Version: 4.7.0
 Section: python
 Priority: optional
 Rules-Requires-Root: no
