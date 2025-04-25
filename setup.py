@@ -93,7 +93,7 @@ def get_build_env():
 def get_generator_flags():
     flags = ["-G"]
     if is_win:
-        flags.append("\"Visual Studio 16 2019\"")
+        flags.append("\"Visual Studio 17 2022\"")
         flags.append("-A")
         flags.append("ARM64" if platform.machine() == "ARM64" else "x64" if is_x64 else "Win32")
     else:
@@ -249,9 +249,9 @@ extensions = [
     )
 ]
 
-with open('README.rst') as f:  # , encoding='utf-8'
+with open('README.md') as f:  # , encoding='utf-8'
     readme = f.read()
-with open('HISTORY.rst') as f:  # , encoding='utf-8'
+with open('HISTORY.md') as f:  # , encoding='utf-8'
     history = f.read()
 
 if USE_CYTHON:
@@ -262,6 +262,7 @@ setup(
     version=version,
     description='AMQP 1.0 Client Library for Python',
     long_description=readme + '\n\n' + history,
+    long_description_content_type="text/markdown",
     license='MIT License',
     author='Microsoft Corporation',
     author_email='azpysdkhelp@microsoft.com',
@@ -272,11 +273,12 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
         'License :: OSI Approved :: MIT License'
     ],
     zip_safe=False,
@@ -285,10 +287,9 @@ setup(
     ext_modules=extensions,
     install_requires=[
         "certifi>=2017.4.17",
-        "six~=1.0"
     ],
     cmdclass={
         'build_ext': build_ext,
     },
-    python_requires=">=3.6",
+    python_requires=">=3.7",
 )
