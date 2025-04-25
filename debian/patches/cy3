@@ -1,0 +1,13 @@
+From: Michael R. Crusoe <crusoe@debian.org>
+Subject: Cython, silence warnings about the language_level
+--- azure-uamqp-python.orig/setup.py
++++ azure-uamqp-python/setup.py
+@@ -248,7 +248,7 @@
+     history = f.read()
+ 
+ if USE_CYTHON:
+-    extensions = cythonize(extensions)
++    extensions = cythonize(extensions, language_level = "3str")
+ 
+ setup(
+     name='uamqp',

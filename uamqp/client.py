@@ -283,7 +283,10 @@ class AMQPClient(object):
             self.message_handler = None
         self._shutdown = True
         if self._keep_alive_thread:
-            self._keep_alive_thread.join()
+            try:
+                self._keep_alive_thread.join()
+            except RuntimeError:  # Probably thread failed to start in .open()
+                logging.info("Keep alive thread failed to join.", exc_info=True)
             self._keep_alive_thread = None
         if not self._session:
             return  # already closed.
@@ -383,7 +386,7 @@ class AMQPClient(object):
             return False
         return True
 
-    def do_work(self):
+    def do_work(self, **kwargs): # pylint: disable=unused-argument
         """Run a single connection iteration.
         This will return `True` if the connection is still open
         and ready to be used for further work, or `False` if it needs
