@@ -1,8 +1,6 @@
-diff --git a/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/tlsio_openssl.c b/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/tlsio_openssl.c
-index 10faf7e..1d5df2f 100644
---- a/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/tlsio_openssl.c
-+++ b/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/tlsio_openssl.c
-@@ -450,6 +450,7 @@ static const IO_INTERFACE_DESCRIPTION tlsio_openssl_interface_description =
+--- azure-uamqp-python.orig/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/tlsio_openssl.c
++++ azure-uamqp-python/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/tlsio_openssl.c
+@@ -451,6 +451,7 @@ static const IO_INTERFACE_DESCRIPTION tl
      tlsio_openssl_setoption
  };
  
@@ -10,7 +8,7 @@ index 10faf7e..1d5df2f 100644
  static LOCK_HANDLE * openssl_locks = NULL;
  
  
-@@ -476,6 +477,7 @@ static void openssl_lock_unlock_helper(LOCK_HANDLE lock, int lock_mode, const ch
+@@ -477,6 +478,7 @@ static void openssl_lock_unlock_helper(L
          }
      }
  }
@@ -18,7 +16,7 @@ index 10faf7e..1d5df2f 100644
  
  static void log_ERR_get_error(const char* message)
  {
-@@ -498,6 +500,7 @@ static void log_ERR_get_error(const char* message)
+@@ -499,6 +501,7 @@ static void log_ERR_get_error(const char
      }
  }
  
@@ -26,7 +24,7 @@ index 10faf7e..1d5df2f 100644
  static STATIC_VAR_UNUSED struct CRYPTO_dynlock_value* openssl_dynamic_locks_create_cb(const char* file, int line)
  {
  #ifdef NO_LOGGING
-@@ -541,10 +544,11 @@ static STATIC_VAR_UNUSED void openssl_dynamic_locks_destroy_cb(struct CRYPTO_dyn
+@@ -542,10 +545,11 @@ static STATIC_VAR_UNUSED void openssl_dy
      Lock_Deinit(dynlock_value->lock);
      free(dynlock_value);
  }
@@ -39,7 +37,7 @@ index 10faf7e..1d5df2f 100644
      CRYPTO_set_dynlock_create_callback(NULL);
      CRYPTO_set_dynlock_lock_callback(NULL);
      CRYPTO_set_dynlock_destroy_callback(NULL);
-@@ -553,13 +557,14 @@ static void openssl_dynamic_locks_uninstall(void)
+@@ -554,13 +558,14 @@ static void openssl_dynamic_locks_uninst
  
  static void openssl_dynamic_locks_install(void)
  {
@@ -55,7 +53,7 @@ index 10faf7e..1d5df2f 100644
  static void STATIC_VAR_UNUSED openssl_static_locks_lock_unlock_cb(int lock_mode, int lock_index, const char * file, int line)
  {
      if (lock_index < 0 || lock_index >= CRYPTO_num_locks())
-@@ -571,9 +576,11 @@ static void STATIC_VAR_UNUSED openssl_static_locks_lock_unlock_cb(int lock_mode,
+@@ -572,9 +577,11 @@ static void STATIC_VAR_UNUSED openssl_st
          openssl_lock_unlock_helper(openssl_locks[lock_index], lock_mode, file, line);
      }
  }
@@ -67,7 +65,7 @@ index 10faf7e..1d5df2f 100644
      if (openssl_locks != NULL)
      {
          int i;
-@@ -594,12 +601,14 @@ static void openssl_static_locks_uninstall(void)
+@@ -595,12 +602,14 @@ static void openssl_static_locks_uninsta
      {
          LogError("Locks already uninstalled");
      }
@@ -82,7 +80,7 @@ index 10faf7e..1d5df2f 100644
      if (openssl_locks != NULL)
      {
          LogInfo("Locks already initialized");
-@@ -643,6 +652,9 @@ static int openssl_static_locks_install(void)
+@@ -645,6 +654,9 @@ static int openssl_static_locks_install(
              }
          }
      }
@@ -92,17 +90,7 @@ index 10faf7e..1d5df2f 100644
      return result;
  }
  
-@@ -759,7 +771,9 @@ void engine_destroy(TLS_IO_INSTANCE* tls)
- {
-     if(tls->engine != NULL)
-     {
-+#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
-         ENGINE_free(tls->engine); // Release structural reference.
-+#endif
-         tls->engine = NULL;
-     }
- }
-@@ -769,7 +783,11 @@ int engine_load(TLS_IO_INSTANCE* tls)
+@@ -774,7 +786,11 @@ int engine_load(TLS_IO_INSTANCE* tls)
      int result;
  
      // TLSIO is only responsible for the Engine structural reference.
@@ -114,7 +102,7 @@ index 10faf7e..1d5df2f 100644
      if (tls->engine == NULL)
      {
          log_ERR_get_error("unable to load engine by ID.");
-@@ -1218,11 +1236,17 @@ static int create_openssl_instance(TLS_IO_INSTANCE* tlsInstance)
+@@ -1234,11 +1250,17 @@ static int create_openssl_instance(TLS_I
  
  int tlsio_openssl_init(void)
  {
@@ -132,8 +120,8 @@ index 10faf7e..1d5df2f 100644
  
      if (openssl_static_locks_install() != 0)
      {
-@@ -1241,10 +1265,16 @@ void tlsio_openssl_deinit(void)
- #if  (OPENSSL_VERSION_NUMBER >= 0x00907000L) &&  (OPENSSL_VERSION_NUMBER < 0x20000000L) && (FIPS_mode_set)
+@@ -1257,10 +1279,16 @@ void tlsio_openssl_deinit(void)
+ #if  (OPENSSL_VERSION_NUMBER >= 0x00907000L) && (FIPS_mode_set)
      FIPS_mode_set(0);
  #endif
 +#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
@@ -149,7 +137,7 @@ index 10faf7e..1d5df2f 100644
  
  #if   (OPENSSL_VERSION_NUMBER < 0x10000000L)
      ERR_remove_state(0);
-@@ -1254,7 +1284,9 @@ void tlsio_openssl_deinit(void)
+@@ -1270,7 +1298,9 @@ void tlsio_openssl_deinit(void)
  #if  (OPENSSL_VERSION_NUMBER >= 0x10002000L) &&  (OPENSSL_VERSION_NUMBER < 0x10010000L) && (SSL_COMP_free_compression_methods)
      SSL_COMP_free_compression_methods();
  #endif
@@ -159,8 +147,8 @@ index 10faf7e..1d5df2f 100644
  }
  
  CONCRETE_IO_HANDLE tlsio_openssl_create(void* io_create_parameters)
-@@ -1721,7 +1753,9 @@ int tlsio_openssl_setoption(CONCRETE_IO_HANDLE tls_io, const char* optionName, c
-         }
+@@ -1743,7 +1773,9 @@ int tlsio_openssl_setoption(CONCRETE_IO_
+         #ifndef OPENSSL_NO_ENGINE
          else if (strcmp(OPTION_OPENSSL_ENGINE, optionName) == 0)
          {
 +#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
@@ -169,11 +157,9 @@ index 10faf7e..1d5df2f 100644
  
              if (mallocAndStrcpy_s((char**)&tls_io_instance->engine_id, value) != 0)
              {
-diff --git a/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/x509_openssl.c b/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/x509_openssl.c
-index bdb8c6f..ddae6a6 100644
---- a/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/x509_openssl.c
-+++ b/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/x509_openssl.c
-@@ -136,6 +136,17 @@ static int load_ecc_key(SSL_CTX* ssl_ctx, EVP_PKEY* evp_key)
+--- azure-uamqp-python.orig/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/x509_openssl.c
++++ azure-uamqp-python/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/x509_openssl.c
+@@ -138,6 +138,17 @@ static int load_ecc_key(SSL_CTX* ssl_ctx
  static int load_key_RSA(SSL_CTX* ssl_ctx, EVP_PKEY* evp_key)
  {
      int result;
@@ -191,7 +177,7 @@ index bdb8c6f..ddae6a6 100644
      /*Codes_SRS_X509_OPENSSL_02_005: [ x509_openssl_add_credentials shall use PEM_read_bio_RSAPrivateKey to read the x509 private key. ]*/
      RSA* privatekey = EVP_PKEY_get1_RSA(evp_key);
      if (privatekey == NULL)
-@@ -161,6 +172,7 @@ static int load_key_RSA(SSL_CTX* ssl_ctx, EVP_PKEY* evp_key)
+@@ -163,6 +174,7 @@ static int load_key_RSA(SSL_CTX* ssl_ctx
          }
          RSA_free(privatekey);
      }
@@ -199,24 +185,8 @@ index bdb8c6f..ddae6a6 100644
      return result;
  }
  
-@@ -219,6 +231,7 @@ int x509_openssl_add_pem_file_key(SSL_CTX* ssl_ctx, const char* x509privatekey)
-     return result;
- }
- 
-+#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
- int x509_openssl_add_engine_key(SSL_CTX* ssl_ctx, const char* x509privatekey_id, ENGINE* engine)
- {
-     int result;
-@@ -270,6 +283,7 @@ int x509_openssl_add_engine_key(SSL_CTX* ssl_ctx, const char* x509privatekey_id,
- 
-     return result;
- }
-+#endif
- 
- int x509_openssl_add_credentials(
-     SSL_CTX* ssl_ctx,
-@@ -299,7 +313,12 @@ int x509_openssl_add_credentials(
-         }
+@@ -314,7 +326,12 @@ int x509_openssl_add_credentials(
+         #ifndef OPENSSL_NO_ENGINE
          else if (x509privatekeytype == KEY_TYPE_ENGINE)
          {
 +#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
@@ -226,5 +196,5 @@ index bdb8c6f..ddae6a6 100644
 +	    result = MU_FAILURE;
 +#endif
          }
+         #endif // OPENSSL_NO_ENGINE
          else
-         {
