@@ -1,3 +1,5 @@
+Update code to use functions which are not deprecated in OpenSSL 3
+
 --- azure-uamqp-python.orig/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/tlsio_openssl.c
 +++ azure-uamqp-python/src/vendor/azure-uamqp-c/deps/azure-c-shared-utility/adapters/tlsio_openssl.c
 @@ -451,6 +451,7 @@ static const IO_INTERFACE_DESCRIPTION tl
